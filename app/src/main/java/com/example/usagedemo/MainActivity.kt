@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
             // 현재 이벤트를 가져오기
             val event = UsageEvents.Event()
             usageEvents.getNextEvent(event)
-            if(event.packageName.endsWith("youtube") || event.packageName.endsWith("pointberry")) {
+            if (event.packageName.endsWith("youtube") || event.packageName.endsWith("pointberry")) {
                 runOnUiThread {
                     val msg = "${event.packageName} -> ${event.timeStamp}"
                     textView.append(msg + "\n")
