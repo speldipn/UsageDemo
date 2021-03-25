@@ -1,18 +1,21 @@
 package com.example.usagedemo
 
-import android.Manifest
 import android.app.AppOpsManager
+import android.app.AppOpsManager.OPSTR_GET_USAGE_STATS
 import android.app.usage.UsageEvents
+import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.AppOpsManagerCompat.MODE_ALLOWED
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,7 +27,6 @@ class MainActivity : AppCompatActivity() {
 
         checkPackageNameThread = CheckPackageNameThread()
         checkPackageNameThread?.start()
-
 
         startButton.setOnClickListener {
             if (!checkPermission()) {
@@ -39,59 +41,56 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermission(): Boolean {
-        val appOps = applicationContext.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-
-        val mode = appOps.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            applicationContext.packageName
-        )
-
-        return if (mode == AppOpsManager.MODE_DEFAULT) {
-            applicationContext.checkCallingOrSelfPermission(Manifest.permission.PACKAGE_USAGE_STATS) == PackageManager.PERMISSION_GRANTED
-        } else {
-            mode == AppOpsManager.MODE_ALLOWED
-        }
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(OPSTR_GET_USAGE_STATS, Process.myUid(), packageName)
+        return mode == MODE_ALLOWED
     }
 
-    fun getPackageName(context: Context): String? {
+    fun getPackageName(context: Context) {
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.YEAR, -1)
 
         val usageStatsManager =
             context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        var lastRunAppTimeStamp = 0L
 
-        val INTERVAL: Long = POLL_INTERVAL + 1000
-        val end = System.currentTimeMillis()
-        val begin = end - INTERVAL
+//        val startTime = GregorianCalendar(2014, 0, 1).timeInMillis
+//        val endTime = GregorianCalendar(2016, 0, 1).timeInMillis
 
-        val packageNameMap = hashMapOf<Long, String>()
+        val stats =
+            usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                cal.timeInMillis,
+                System.currentTimeMillis()
+            )
 
-        val usageEvents = usageStatsManager.queryEvents(begin, end)
-
-        while (usageEvents.hasNextEvent()) {
-
-            val event = UsageEvents.Event()
-            usageEvents.getNextEvent(event)
-
-            if (isForeGroundEvent(event)) {
-                packageNameMap[event.timeStamp] = event.packageName
-                if (event.timeStamp > lastRunAppTimeStamp) {
-                    lastRunAppTimeStamp = event.timeStamp
-                }
-            }
-        }
-
-        return packageNameMap[lastRunAppTimeStamp]
+        showUsageStats(stats)
     }
 
-    private fun isForeGroundEvent(event: UsageEvents.Event?): Boolean {
-        if (event == null) return false
-        return if (Build.VERSION.SDK_INT >= 29) {
-            event.eventType == UsageEvents.Event.ACTIVITY_RESUMED
-        } else {
-            event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
+    private fun showUsageStats(stats: List<UsageStats>) {
+        val sorted = stats.sortedWith(kotlin.Comparator { right, left ->
+            compareValues(
+                left.lastTimeUsed,
+                right.lastTimeUsed
+            )
+        })
+        sorted.forEach { stat ->
+            Log.d(
+                TAG,
+                "pakcageName:${stat.packageName} " +
+                        "lastTimeUsed:${Date(stat.lastTimeUsed)} " +
+                        "foregroundTotalTime:${stat.totalTimeInForeground}"
+            )
         }
     }
+
+//    private fun isForeGroundEvent(event: UsageEvents.Event?): Boolean {
+//        if (event == null) return false
+//        return if (Build.VERSION.SDK_INT >= 29) {
+//            event.eventType == UsageEvents.Event.ACTIVITY_RESUMED
+//        } else {
+//            event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
+//        }
+//    }
 
     inner class CheckPackageNameThread : Thread() {
         override fun run() {
@@ -101,16 +100,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 try {
-                    val packageName = getPackageName(applicationContext)
-                    packageName?.let {
-                        if (it.endsWith("youtube") || it.endsWith("pointberry")) {
-                            runOnUiThread {
-                                textView.append("$it \n")
-                            }
-                        }
-                    }
-
-                    sleep(POLL_INTERVAL)
+                    getPackageName(applicationContext)
+                    sleep(2000)
                 } catch (e: InterruptedException) {
                     e.printStackTrace()
                 }
@@ -120,7 +111,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val TAG = "UsageDemoDebug"
-        const val POLL_INTERVAL = 2000L
     }
 
 }
