@@ -58,35 +58,40 @@ class MainActivity : AppCompatActivity() {
         val usageStatsManager =
             context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
-//        val startTime = GregorianCalendar(2014, 0, 1).timeInMillis
-//        val endTime = GregorianCalendar(2016, 0, 1).timeInMillis
+        val startTime = System.currentTimeMillis() - (1000 * 60 * 10)
+        val endTime = System.currentTimeMillis()
 
-        val stats =
-            usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                cal.timeInMillis,
-                System.currentTimeMillis()
-            )
-
-        showUsageStats(stats)
-    }
-
-    private fun showUsageStats(stats: List<UsageStats>) {
-        val sorted = stats.sortedWith(kotlin.Comparator { right, left ->
-            compareValues(
-                left.lastTimeUsed,
-                right.lastTimeUsed
-            )
-        })
-        sorted.forEach { stat ->
-            Log.d(
-                TAG,
-                "packageName:${stat.packageName} " +
-                        "lastTimeUsed:${Date(stat.lastTimeUsed)} " +
-                        "foregroundTotalTime:${stat.totalTimeInForeground}"
-            )
+        val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+//        for (stat in stats) {
+            stats["com.tpmn.pointberry"]?.run {
+                Log.d(TAG, "$packageName : $totalTimeInForeground [ms]")
+//            }
         }
+//            usageStatsManager.queryUsageStats(
+//                UsageStatsManager.INTERVAL_DAILY,
+//                cal.timeInMillis,
+//                System.currentTimeMillis()
+//            )
+
+//        showUsageStats(stats)
     }
+
+//    private fun showUsageStats(stats: List<UsageStats>) {
+//        val sorted = stats.sortedWith(kotlin.Comparator { right, left ->
+//            compareValues(
+//                left.lastTimeUsed,
+//                right.lastTimeUsed
+//            )
+//        })
+//        sorted.forEach { stat ->
+//            Log.d(
+//                TAG,
+//                "packageName:${stat.packageName} " +
+//                        "lastTimeUsed:${Date(stat.lastTimeUsed)} " +
+//                        "foregroundTotalTime:${stat.totalTimeInForeground}"
+//            )
+//        }
+//    }
 
     private fun isForeGroundEvent(event: UsageEvents.Event?): Boolean {
         if (event == null) return false
