@@ -20,6 +20,7 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
 
     private var checkPackageNameThread: CheckPackageNameThread? = null
+    private var checkPacakgeNameThread1: CheckPackageNameThread? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +28,10 @@ class MainActivity : AppCompatActivity() {
 
         checkPackageNameThread = CheckPackageNameThread()
         checkPackageNameThread?.start()
+
+        val checkPackageNameThread1 = CheckPackageNameThread()
+        checkPackageNameThread1.start()
+
 
         startButton.setOnClickListener {
             if (!checkPermission()) {
@@ -76,21 +81,21 @@ class MainActivity : AppCompatActivity() {
         sorted.forEach { stat ->
             Log.d(
                 TAG,
-                "pakcageName:${stat.packageName} " +
+                "packageName:${stat.packageName} " +
                         "lastTimeUsed:${Date(stat.lastTimeUsed)} " +
                         "foregroundTotalTime:${stat.totalTimeInForeground}"
             )
         }
     }
 
-//    private fun isForeGroundEvent(event: UsageEvents.Event?): Boolean {
-//        if (event == null) return false
-//        return if (Build.VERSION.SDK_INT >= 29) {
-//            event.eventType == UsageEvents.Event.ACTIVITY_RESUMED
-//        } else {
-//            event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
-//        }
-//    }
+    private fun isForeGroundEvent(event: UsageEvents.Event?): Boolean {
+        if (event == null) return false
+        return if (Build.VERSION.SDK_INT >= 29) {
+            event.eventType == UsageEvents.Event.ACTIVITY_RESUMED
+        } else {
+            event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
+        }
+    }
 
     inner class CheckPackageNameThread : Thread() {
         override fun run() {
